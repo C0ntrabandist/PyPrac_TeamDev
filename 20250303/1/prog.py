@@ -1,13 +1,35 @@
 import cowsay
+from io import StringIO
 
+
+jgsbat = cowsay.read_dot_cow(StringIO("""
+$the_cow = <<EOC;
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\--//|.'-._  (
+     )'   .'\\/o\\/o\\/'.   `(
+      ) .' . \\====/ . '. (
+       )  / <<    >> \\  (
+        '-._/``  ``\\_.-'
+  jgs     __\\'--'//__
+         (((""`  `"")))
+EOC
+"""))
 
 field = [[0 for j in range(10)] for i in range(10)]
 allowed_list = cowsay.list_cows()
+user_list = {'jgsbat': jgsbat}
 
 
 def encounter(x, y):
     out = field[y][x].split()
-    print(cowsay.cowsay(out[1], cow=out[0]))
+    hello = out[1]
+    name = out[0]
+
+    if name in allowed_list:
+        print(cowsay.cowsay(hello, cow=name))
+    else:
+        print(cowsay.cowthink(hello, cowfile=jgsbat))
 
 
 x, y = 0, 0
@@ -50,7 +72,7 @@ while inp := input():
                 print("Invalid arguments")
                 continue
 
-            if inp[3] not in allowed_list:
+            if inp[1] not in allowed_list and inp[1] not in user_list:
                 print("Invalid arguments")
                 continue
 
