@@ -19,6 +19,8 @@ class Mud(cmd.Cmd):
     EOC
     """))
 
+    weapons = ['sword', 'spear', 'axe']
+
     prompt = ':->'
 
     def __init__(self):
@@ -146,14 +148,36 @@ class Mud(cmd.Cmd):
     def do_addmon(self, args):
         self.move_mon(*self.get_mon_args(args))
 
+
     def do_attack(self, args):
         if self.field[self.y][self.x] == 0:
             print("No monster here")
             return
 
+        args = shlex.split(args)
+        weapon = 'sword'
+
+        if len(args) >= 1 and args[0] != 'with':
+            print("Invalid arguments")
+            return
+
+        if len(args) >= 2:
+            weapon = args[1]
+
+        if weapon != 'sword' and weapon != 'spear' and weapon != 'axe':
+            print("Unknown weapon")
+            return
+
         hp = int(self.field[self.y][self.x]['hp'])
         name = self.field[self.y][self.x]['name']
-        damage = 10
+
+        if weapon == 'sword':
+            damage = 10
+        elif weapon == 'spear':
+            damage = 15
+        else:
+            damage = 20
+
 
         if hp < 10:
             damage = hp
@@ -168,6 +192,13 @@ class Mud(cmd.Cmd):
             print(f"{name} now has {hp}")
             self.field[self.y][self.x]['hp'] = hp
 
+
+    def complete_attack(self, text, line, begidx, endidx):
+        res = shlex.split(line[:begidx], 0, 0)
+
+        if res[-1] == 'with':
+            return [c for c in self.weapons if c.startswith(text)]
+
     def do_EOF(self, args):
         return True
 
@@ -175,4 +206,4 @@ class Mud(cmd.Cmd):
 if __name__ == "__main__":
     print("<<< Welcome to Python-MUD 0.1 >>>")
 
-    Mud().cmdloop()  
+    Mud().cmdloop()    
