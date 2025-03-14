@@ -32,6 +32,7 @@ class Mud(cmd.Cmd):
         self.allowed_list = cowsay.list_cows()
         self.user_list = {'jgsbat': self.jgsbat}
 
+
     def get_mon_args(self, args):
         args = shlex.split(args)
 
@@ -146,9 +147,20 @@ class Mud(cmd.Cmd):
     def do_addmon(self, args):
         self.move_mon(*self.get_mon_args(args))
 
+
     def do_attack(self, args):
+        args = shlex.split(args)
+
+        if len(args) < 1:
+            print("Type monster name")
+            return
+
         if self.field[self.y][self.x] == 0:
             print("No monster here")
+            return
+
+        if args[0] != self.field[self.y][self.x]['name']:
+            print(f"No {args[0]} here")
             return
 
         hp = int(self.field[self.y][self.x]['hp'])
@@ -168,11 +180,17 @@ class Mud(cmd.Cmd):
             print(f"{name} now has {hp}")
             self.field[self.y][self.x]['hp'] = hp
 
+
+    def complete_attack(self, text, line, begidx, endidx):
+        mon_list = list(self.user_list.keys()) + self.allowed_list
+
+        return [c for c in mon_list if c.startswith(text)]
+
+
     def do_EOF(self, args):
         return True
 
 
 if __name__ == "__main__":
     print("<<< Welcome to Python-MUD 0.1 >>>")
-
-    Mud().cmdloop()  
+    Mud().cmdloop()    
