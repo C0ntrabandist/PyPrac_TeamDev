@@ -1,8 +1,10 @@
 import cowsay
-import cmd
-from io import StringIO
-import shlex
 
+from io import StringIO
+
+import shlex
+import cmd
+import sys
 
 class Mud(cmd.Cmd):
     jgsbat = cowsay.read_dot_cow(StringIO("""
@@ -221,5 +223,7 @@ class Mud(cmd.Cmd):
 
 
 if __name__ == "__main__":
+    name = sys.argv[1] if len(sys.argv) > 1 else "user"
+    print(name)
     print("<<< Welcome to Python-MUD 0.1 >>>")
     Mud().cmdloop()    
