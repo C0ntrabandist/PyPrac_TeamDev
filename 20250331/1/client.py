@@ -52,6 +52,9 @@ class Mud(cmd.Cmd):
     def do_attack(self, args):
         self.conn.sendall(("attack " + args + "\n").encode())
 
+    def do_sayall(self, args):
+        self.conn.sendall(("sayall " + args + "\n").encode())
+
     def complete_attack(self, text, line, begidx, endidx):
         res = shlex.split(line[:begidx], 0, 0)
         if len(res) <= 1:
@@ -76,18 +79,15 @@ def recieve(cmd):
         print(f"\n{data.strip()}\n{cmd.prompt}{readline.get_line_buffer()}", end='', flush=True)
 
 if __name__ == "__main__":
-    print("<<< Welcome to Python-MUD 0.1 >>>")
-
     name = "my name\n" if len(sys.argv) < 2 else sys.argv[1] + "\n"
     host = "localhost" if len(sys.argv) < 3 else sys.argv[2]
     port = 1337 if len(sys.argv) < 4 else int(sys.argv[3])
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
-        print(name)
         s.sendall(name.encode())
         is_name = s.recv(1024).decode()
-        if (is_name == "off"):
+        if (is_name[:-1] == "off"):
             print("The name is busy")
             sys.exit(0)
 
