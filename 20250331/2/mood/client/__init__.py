@@ -1,73 +1,72 @@
+"""Init file for client."""
+
 import cowsay
 import cmd
-from io import StringIO
-import sys
-import socket
-import shlex
-import threading
 import readline
+import shlex
 
-class Mud(cmd.Cmd):
-    jgsbat = cowsay.read_dot_cow(StringIO("""
-    $the_cow = <<EOC;
-        ,_                    _,
-        ) '-._  ,_    _,  _.-' (
-        )  _.-'.|\\--//|.'-._  (
-         )'   .'\\/o\\/o\\/'.   `(
-          ) .' . \\====/ . '. (
-           )  / <<    >> \\  (
-            '-._/``  ``\\_.-'
-      jgs     __\\'--'//__
-             (((""`  `"")))
-    EOC
-    """))
+from ..common import jgsbat, prompt, weapons
 
-    weapons = {'sword': 10, 'spear': 15, 'axe': 20}
 
-    prompt = ':->'
+class Mood(cmd.Cmd):
+    """Class Mood shows the command line, autocomplete attack command and send commands to server."""
+
+    prompt = prompt
 
     def __init__(self, conn):
+        """Initialize variables."""
         super().__init__()
 
         self.conn = conn
 
         self.allowed_list = cowsay.list_cows()
-        self.user_list = {'jgsbat': self.jgsbat}
+        self.user_list = {'jgsbat': jgsbat}
 
     def do_up(self, args):
+        """Send to server message about moving up."""
         self.conn.sendall("move 0 -1\n".encode())
 
     def do_down(self, args):
+        """Send to server message about moving down."""
         self.conn.sendall("move 0 1\n".encode())
 
     def do_right(self, args):
+        """Send to server message about moving to the right."""
         self.conn.sendall("move 1 0\n".encode())
 
     def do_left(self, args):
+        """Send to server message about moving to the left."""
         self.conn.sendall("move -1 0\n".encode())
 
     def do_addmon(self, args):
+        """Send message about adding the monster."""
         self.conn.sendall(("addmon " + args + "\n").encode())
 
     def do_attack(self, args):
+        """Send message about attackin the monster."""
         self.conn.sendall(("attack " + args + "\n").encode())
 
     def do_sayall(self, args):
+        """Send message to all players."""
         self.conn.sendall(("sayall " + args + "\n").encode())
 
     def complete_attack(self, text, line, begidx, endidx):
+        """Complete attack line."""
         res = shlex.split(line[:begidx], 0, 0)
+
         if len(res) <= 1:
             mon_list = list(self.user_list.keys()) + self.allowed_list
             return [c for c in mon_list if c.startswith(text)]
         elif res[-1] == 'with':
-            return [c for c in self.weapons if c.startswith(text)]
+            return [c for c in weapons if c.startswith(text)]
 
     def do_EOF(self, args):
+        """End cmd activity."""
         return True
 
 
 def recieve(cmd):
+    """Recieve the messages from server in another thread."""
     while cmd.conn is not None:
         data = ""
 
@@ -77,25 +76,3 @@ def recieve(cmd):
         data += new.decode()
 
         print(f"\n{data.strip()}\n{cmd.prompt}{readline.get_line_buffer()}", end='', flush=True)
-
-if __name__ == "__main__":
-    name = "my name\n" if len(sys.argv) < 2 else sys.argv[1] + "\n"
-    host = "localhost" if len(sys.argv) < 3 else sys.argv[2]
-    port = 1337 if len(sys.argv) < 4 else int(sys.argv[3])
-
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((host, port))
-        s.sendall(name.encode())
-        is_name = s.recv(1024).decode()
-        if (is_name[:-1] == "off"):
-            print("The name is busy")
-            sys.exit(0)
-
-        print(f"{name[:-1]}, Welcome to Python-MUD 0.1 !!!")
-        mud = Mud(s)
-
-        recieve = threading.Thread(target=recieve, args=(mud,))
-        recieve.daemon = True
-        recieve.start()
-
-        mud.cmdloop()   

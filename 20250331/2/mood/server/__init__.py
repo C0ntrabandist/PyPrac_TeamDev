@@ -1,34 +1,24 @@
-#!/usr/bin/env python3
+"""Initial file for server."""
+
 import cowsay
-import cmd
-from io import StringIO
-import sys
-import socket
-import shlex
+# import cmd
+# import re
 import asyncio
-import re
+import shlex
 
-pattern = re.compile(r'\w+')
+from ..common import jgsbat, weapons
+# pattern = re.compile(r'\w+')
 
 
-class Mud():
-    jgsbat = cowsay.read_dot_cow(StringIO("""
-    $the_cow = <<EOC;
-        ,_                    _,
-        ) '-._  ,_    _,  _.-' (
-        )  _.-'.|\\--//|.'-._  (
-         )'   .'\\/o\\/o\\/'.   `(
-          ) .' . \\====/ . '. (
-           )  / <<    >> \\  (
-            '-._/``  ``\\_.-'
-      jgs     __\\'--'//__
-             (((""`  `"")))
-    EOC
-    """))
+class Mood():
+    """Check correctness of clients commands and executes them."""
 
-    weapons = {'sword': 10, 'spear': 15, 'axe': 20}
+    jgsbat = jgsbat
+
+    weapons = weapons
 
     def __init__(self):
+        """Set initial values and allowed cows."""
         super().__init__()
 
         self.x = dict()
@@ -42,13 +32,15 @@ class Mud():
         self.user_list = {'jgsbat': self.jgsbat}
 
     def add_client(self, client):
+        """Add client to the field."""
         self.x[client] = 0
         self.y[client] = 0
 
     def get_mon_args(self, args):
+        """Check the correctness of arguments from the "addmon" command."""
         args = shlex.split(args)
 
-        name, hello, hp, m_x, m_y  = self.invalid_mon
+        name, hello, hp, m_x, m_y = self.invalid_mon
         if len(args) == 0:
             args += ['default']
 
@@ -98,6 +90,7 @@ class Mud():
         return (name, hello, hp, m_x, m_y)
 
     def move(self, client, args):
+        """Move user to the next cell."""
         args = args.split()
         dx, dy = int(args[0]), int(args[1])
 
@@ -111,7 +104,7 @@ class Mud():
             return ans
 
         hello = self.field[y][x]['hello']
-        hp = self.field[y][x]['hp']
+        # hp = self.field[y][x]['hp']
         name = self.field[y][x]['name']
 
         if name in self.allowed_list:
@@ -122,19 +115,27 @@ class Mud():
         return ans
 
     def addmon(self, client, args):
+        """Add monster to the cell."""
         (name, hello, hp, m_x, m_y) = self.get_mon_args(args)
 
         if (name, hello, hp, m_x, m_y) == self.invalid_mon:
             return "Invalid arguments\n"
 
         if self.field[m_y][m_x] == 0:
-            self.field[m_y][m_x] = {'hello':hello, 'hp': hp, 'name': name}
-            return client + f' added {name} to ({m_x}, {m_y}) saying {hello} with hp = {hp}'
+            self.field[m_y][m_x] = {'hello': hello, 'hp': hp, 'name': name}
+
+            ans = '"' + client + '"' + f' added {name} to ({m_x}, {m_y}) saying {hello} '
+            ans += f"with hp = {hp}"
+
+            return ans
         else:
-            self.field[m_y][m_x] = {'hello':hello, 'hp': hp, 'name': name}
-            return client + f' replaced the old monster in ({m_x}, {m_y}) with a {name} saying {hello} with hp = {hp}'
+            self.field[m_y][m_x] = {'hello': hello, 'hp': hp, 'name': name}
+            ans = '"' + client + '"' + ' replaced the old monster in '
+            ans += f"({m_x}, {m_y}) with a {name} saying {hello} with hp = {hp}"
+            return ans
 
     def attack(self, client, args):
+        """Attack monster in the current cell."""
         args = shlex.split(args)
 
         if len(args) < 1:
@@ -162,18 +163,13 @@ class Mud():
         hp = int(self.field[y][x]['hp'])
         name = self.field[y][x]['name']
 
-        if weapon == 'sword':
-            damage = 10
-        elif weapon == 'spear':
-            damage = 15
-        else:
-            damage = 20
+        damage = weapons[weapon]
 
         if hp < damage:
             damage = hp
         hp -= damage
 
-        ans = client + f" attacked {name},  damage {damage} hp\n"
+        ans = '"' + client + '"' + f" attacked {name},  damage {damage} hp\n"
 
         if hp <= 0:
             ans += f"{name} died"
@@ -184,14 +180,17 @@ class Mud():
 
         return ans
 
-mud = Mud()
+
+mood = Mood()
 
 clients = dict()
 clients_names = set()
 
 clients_conns = dict()
 
+
 async def chat(reader, writer):
+    """Check correctness of clients commands and executes them."""
     global clients, clients_names, clients_conns
 
     me = "{}:{}".format(*writer.get_extra_info('peername'))
@@ -203,7 +202,7 @@ async def chat(reader, writer):
         writer.write("off\n".encode())
         return
     else:
-        mud.add_client(name)
+        mood.add_client(name)
         clients_names.add(name)
         clients[me] = name
 
@@ -229,9 +228,9 @@ async def chat(reader, writer):
                     writer.write("Command is incorrect.\n".encode())
                     continue
                 if query[0] == 'move':
-                    writer.write(mud.move(clients[me], " ".join(query[1:])).encode())
+                    writer.write(mood.move(clients[me], " ".join(query[1:])).encode())
                 elif query[0] == 'addmon':
-                    ans = mud.addmon(clients[me], " ".join(query[1:]))
+                    ans = mood.addmon(clients[me], " ".join(query[1:]))
 
                     if ans == "Invalid arguments":
                         writer.write(ans.encode())
@@ -239,9 +238,9 @@ async def chat(reader, writer):
                         for i in clients_names:
                             await clients_conns[i].put(ans)
                 elif query[0] == 'attack':
-                    ans = mud.attack(clients[me], " ".join(query[1:]))
+                    ans = mood.attack(clients[me], " ".join(query[1:]))
 
-                    if ans.startswith(clients[me]):
+                    if ans.startswith('"' + clients[me] + '"'):
                         for i in clients_names:
                             await clients_conns[i].put(ans)
                     else:
@@ -259,7 +258,6 @@ async def chat(reader, writer):
                 send = asyncio.create_task(reader.readline())
             elif q is receive:
                 receive = asyncio.create_task(clients_conns[name].get())
-                print(q)
                 writer.write(f"{q.result()}\n".encode())
                 await writer.drain()
 
@@ -273,9 +271,9 @@ async def chat(reader, writer):
     del clients[me]
     writer.close()
 
+
 async def main():
+    """Run async server."""
     server = await asyncio.start_server(chat, '0.0.0.0', 1337)
     async with server:
         await server.serve_forever()
-
-asyncio.run(main())
