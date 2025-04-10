@@ -1,0 +1,5 @@
+*~
+*.html
+*.mo
+*.pot
+*build/*
