@@ -5,13 +5,16 @@ import cowsay
 # import re
 import asyncio
 import shlex
+import random
 
 from ..common import jgsbat, weapons
 # pattern = re.compile(r'\w+')
 
+SIZE = 10
+
 
 class Mood():
-    """Check correctness of clients commands and executes them."""
+    """Check correctness of clients commands and execute them."""
 
     jgsbat = jgsbat
 
@@ -21,23 +24,35 @@ class Mood():
         """Set initial values and allowed cows."""
         super().__init__()
 
+        self.clients = set()
         self.x = dict()
         self.y = dict()
 
-        self.field = [[0 for j in range(10)] for i in range(10)]
+        self.field = [[0 for j in range(SIZE)] for i in range(SIZE)]
 
         self.invalid_mon = ('', '', 0, -1, -1)
 
         self.allowed_list = cowsay.list_cows()
         self.user_list = {'jgsbat': self.jgsbat}
+        self.taken_cows = set()
 
     def add_client(self, client):
-        """Add client to the field."""
+        """
+        Add client to the field.
+
+        :param client: nickname of client
+        """
+        self.clients.add(client)
+
         self.x[client] = 0
         self.y[client] = 0
 
     def get_mon_args(self, args):
-        """Check the correctness of arguments from the "addmon" command."""
+        """
+        Check the correctness of arguments from the "addmon" command.
+
+        :param args: string with args
+        """
         args = shlex.split(args)
 
         name, hello, hp, m_x, m_y = self.invalid_mon
@@ -90,12 +105,17 @@ class Mood():
         return (name, hello, hp, m_x, m_y)
 
     def move(self, client, args):
-        """Move user to the next cell."""
+        """
+        Move user to the next cell.
+
+        :param client: nickname of client who will recieve msg
+        :param args: string with args
+        """
         args = args.split()
         dx, dy = int(args[0]), int(args[1])
 
-        self.x[client] = (self.x[client] + dx) % 10
-        self.y[client] = (self.y[client] + dy) % 10
+        self.x[client] = (self.x[client] + dx) % SIZE
+        self.y[client] = (self.y[client] + dy) % SIZE
         x, y = self.x[client], self.y[client]
 
         ans = f"Moved to ({x}, {y})\n"
@@ -115,27 +135,36 @@ class Mood():
         return ans
 
     def addmon(self, client, args):
-        """Add monster to the cell."""
+        """
+        Add monster to the cell.
+
+        :param client: nickname of client who will recieve msg
+        :param args: string with args
+        """
         (name, hello, hp, m_x, m_y) = self.get_mon_args(args)
 
         if (name, hello, hp, m_x, m_y) == self.invalid_mon:
             return "Invalid arguments\n"
 
         if self.field[m_y][m_x] == 0:
-            self.field[m_y][m_x] = {'hello': hello, 'hp': hp, 'name': name}
-
             ans = '"' + client + '"' + f' added {name} to ({m_x}, {m_y}) saying {hello} '
             ans += f"with hp = {hp}"
-
-            return ans
         else:
-            self.field[m_y][m_x] = {'hello': hello, 'hp': hp, 'name': name}
             ans = '"' + client + '"' + ' replaced the old monster in '
             ans += f"({m_x}, {m_y}) with a {name} saying {hello} with hp = {hp}"
-            return ans
+
+        self.field[m_y][m_x] = {'hello': hello, 'hp': hp, 'name': name}
+        self.taken_cows.add((m_y, m_x))
+
+        return ans
 
     def attack(self, client, args):
-        """Attack monster in the current cell."""
+        """
+        Attack monster in the current cell.
+
+        :param client: nickname of client who will recieve msg
+        :param args: string with args
+        """
         args = shlex.split(args)
 
         if len(args) < 1:
@@ -174,24 +203,78 @@ class Mood():
         if hp <= 0:
             ans += f"{name} died"
             self.field[y][x] = 0
+            self.taken_cows.remove((y, x))
         else:
             ans += f"{name} now has {hp}"
             self.field[y][x]['hp'] = hp
 
         return ans
 
+    async def move_random_mon(self):
+        """Move random monster to the next cell by timer."""
+        await asyncio.sleep(30)
+
+        while True:
+            if len(self.taken_cows) == 0 or len(self.taken_cows) == SIZE ** 2:
+                return ("", "", [])
+
+            cell = random.choice(list(self.taken_cows))
+            move = random.choice(['up', 'down', 'right', 'left'])
+
+            if move == 'up':
+                new_cell = ((cell[0] - 1) % SIZE, cell[1])
+            elif move == 'down':
+                new_cell = ((cell[0] + 1) % SIZE, cell[1])
+            elif move == 'right':
+                new_cell = (cell[0], (cell[1] + 1) % SIZE)
+            else:
+                new_cell = (cell[0], (cell[1] - 1) % SIZE)
+
+            if self.field[new_cell[0]][new_cell[1]] != 0:
+                continue
+
+            mon_name = self.field[cell[0]][cell[1]]['name']
+            hello = self.field[cell[0]][cell[1]]['hello']
+
+            msg_all = f"{mon_name} moved one cell {move}"
+
+            if mon_name in self.allowed_list:
+                msg = cowsay.cowsay(hello, cow=mon_name)
+            else:
+                msg = cowsay.cowsay(hello, cowfile=self.user_list[mon_name])
+
+            self.field[new_cell[0]][new_cell[1]] = self.field[cell[0]][cell[1]]
+            self.field[cell[0]][cell[1]] = 0
+
+            self.taken_cows.remove(cell)
+            self.taken_cows.add(new_cell)
+
+            names_list = []
+            for name in self.clients:
+                if self.x[name] == new_cell[1] and self.y[name] == new_cell[0]:
+                    names_list.append(name)
+
+            return (msg_all, msg, names_list)
+
 
 mood = Mood()
 
 clients = dict()
 clients_names = set()
-
 clients_conns = dict()
+
+mon_task = 1
+fl = True
 
 
 async def chat(reader, writer):
-    """Check correctness of clients commands and executes them."""
-    global clients, clients_names, clients_conns
+    """
+    Check correctness of clients commands and executes them.
+
+    :param reader: read data from IO stream
+    :param writer: write data to IO stream
+    """
+    global mood, clients, clients_names, clients_conns, mon_task, fl
 
     me = "{}:{}".format(*writer.get_extra_info('peername'))
 
@@ -216,12 +299,25 @@ async def chat(reader, writer):
 
     send = asyncio.create_task(reader.readline())
     receive = asyncio.create_task(clients_conns[name].get())
+    if fl:
+        mon_task = asyncio.create_task(mood.move_random_mon())
+        fl = False
 
     while not reader.at_eof():
-        done, pending = await asyncio.wait([send, receive], return_when=asyncio.FIRST_COMPLETED)
+        done, pending = await asyncio.wait([send, receive, mon_task], return_when=asyncio.FIRST_COMPLETED)
 
         for q in done:
-            if q is send:
+            if q is mon_task:
+                msg_all, msg, cl = q.result()
+
+                if msg_all != "":
+                    for i in clients_names:
+                        await clients_conns[i].put(msg_all)
+                        if i in cl:
+                            await clients_conns[i].put(msg)
+
+                mon_task = asyncio.create_task(mood.move_random_mon())
+            elif q is send:
                 query = q.result().decode().strip().split()
 
                 if len(query) == 0:
