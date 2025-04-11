@@ -54,6 +54,7 @@ class Mood():
         :param args: string with args
         """
         args = shlex.split(args)
+        print(args)
 
         name, hello, hp, m_x, m_y = self.invalid_mon
         if len(args) == 0:
@@ -75,6 +76,7 @@ class Mood():
         i = 1
         while i < 8:
             if args[i] == 'hello':
+
                 hello = args[i+1]
             elif args[i] == 'hp':
                 try:

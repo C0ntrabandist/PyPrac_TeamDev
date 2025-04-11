@@ -8,9 +8,20 @@ from . import Mood, recieve
 
 
 if __name__ == "__main__":
-    name = "my name\n" if len(sys.argv) < 2 else sys.argv[1] + "\n"
-    host = "localhost" if len(sys.argv) < 3 else sys.argv[2]
-    port = 1337 if len(sys.argv) < 4 else int(sys.argv[3])
+    host = "localhost"
+    port = 1337
+    name = "My name\n"
+    file = ""
+
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == '--file':
+            file = "" if len(sys.argv) < i + 2 else sys.argv[i + 1]
+        elif sys.argv[i] == '--name':
+            name = "my name\n" if len(sys.argv) < i + 2 else sys.argv[i + 1] + "\n"
+        elif sys.argv[i] == '--host':
+            host =  'localhost' if len(sys.argv) < i + 2 else sys.argv[i + 1]
+        elif sys.argv[i] == '--port':
+            port = 1337 if len(sys.argv) < i + 2 else int(sys.argv[i + 1])
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
@@ -21,7 +32,13 @@ if __name__ == "__main__":
             sys.exit(0)
 
         print(f"{name[:-1]}, Welcome to Python-mood 0.1 !!!")
-        mood = Mood(s)
+        if file != "":
+            fd = open(file, 'r')
+            mood = Mood(s, fd)
+            mood.prompt = ""
+            mood.use_rawinput = False
+        else:
+            mood = Mood(s)
 
         recieve = threading.Thread(target=recieve, args=(mood,))
         recieve.daemon = True

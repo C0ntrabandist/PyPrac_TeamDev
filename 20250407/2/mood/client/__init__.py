@@ -4,6 +4,7 @@ import cowsay
 import cmd
 import readline
 import shlex
+import time
 
 from ..common import jgsbat, prompt, weapons
 
@@ -13,14 +14,19 @@ class Mood(cmd.Cmd):
 
     prompt = prompt
 
-    def __init__(self, conn):
+    def __init__(self, conn, stdin):
         """Initialize variables."""
-        super().__init__()
+        super().__init__(stdin=stdin)
 
         self.conn = conn
 
         self.allowed_list = cowsay.list_cows()
         self.user_list = {'jgsbat': jgsbat}
+
+    def precmd(self, line):
+        """Freeze console enter"""
+        time.sleep(1)
+        return super().precmd(line)
 
     def do_up(self, args):
         """Send to server message about moving up."""
