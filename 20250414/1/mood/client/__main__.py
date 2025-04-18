@@ -19,7 +19,7 @@ if __name__ == "__main__":
         elif sys.argv[i] == '--name':
             name = "my name\n" if len(sys.argv) < i + 2 else sys.argv[i + 1] + "\n"
         elif sys.argv[i] == '--host':
-            host =  'localhost' if len(sys.argv) < i + 2 else sys.argv[i + 1]
+            host = 'localhost' if len(sys.argv) < i + 2 else sys.argv[i + 1]
         elif sys.argv[i] == '--port':
             port = 1337 if len(sys.argv) < i + 2 else int(sys.argv[i + 1])
 

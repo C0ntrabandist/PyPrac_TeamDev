@@ -5,6 +5,7 @@ import cmd
 import readline
 import shlex
 import time
+import sys
 
 from ..common import jgsbat, prompt, weapons
 
@@ -14,7 +15,7 @@ class Mood(cmd.Cmd):
 
     prompt = prompt
 
-    def __init__(self, conn, stdin):
+    def __init__(self, conn, stdin=sys.stdin):
         """Initialize variables."""
         super().__init__(stdin=stdin)
 
@@ -24,7 +25,7 @@ class Mood(cmd.Cmd):
         self.user_list = {'jgsbat': jgsbat}
 
     def precmd(self, line):
-        """Freeze console enter"""
+        """Freeze console enter."""
         time.sleep(1)
         return super().precmd(line)
 
@@ -65,6 +66,21 @@ class Mood(cmd.Cmd):
             return [c for c in mon_list if c.startswith(text)]
         elif res[-1] == 'with':
             return [c for c in weapons if c.startswith(text)]
+
+    def do_movemonsters(self, args):
+        """End cmd activity."""
+        if args != "off" and args != "on":
+            print("Invalid command.")
+
+        self.conn.sendall(("movemonsters " + args + "\n").encode())
+
+    def do_q(self, args):
+        """End cmd activity."""
+        return True
+
+    def do_quit(self, args):
+        """End cmd activity."""
+        return True
 
     def do_EOF(self, args):
         """End cmd activity."""
