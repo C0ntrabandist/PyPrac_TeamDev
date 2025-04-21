@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "6bb26a79c324226c07a9913e6572ad854198b27b9e43fd71274f7745fe97243d"
+            "sha256": "cd89db849b0ff491f6336a8f048cb62f03700b8e94d278fa685e96b03367a5a7"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -15,7 +15,17 @@
             }
         ]
     },
-    "default": {},
+    "default": {
+        "python-cowsay": {
+            "hashes": [
+                "sha256:69aa91072e36ff27ceb8261718323c9ab275b3470b2260841c5b9ad5d83e8ff3",
+                "sha256:eae49ea3abc00dba38f166e92f2e8f103a75182a944eb7b79aab5b515ca0363d"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.8'",
+            "version": "==1.2.0"
+        }
+    },
     "develop": {
         "alabaster": {
             "hashes": [
@@ -293,15 +303,6 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==2.17.2"
-        },
-        "python-cowsay": {
-            "hashes": [
-                "sha256:69aa91072e36ff27ceb8261718323c9ab275b3470b2260841c5b9ad5d83e8ff3",
-                "sha256:eae49ea3abc00dba38f166e92f2e8f103a75182a944eb7b79aab5b515ca0363d"
-            ],
-            "index": "pypi",
-            "markers": "python_version >= '3.8'",
-            "version": "==1.2.0"
         },
         "requests": {
             "hashes": [

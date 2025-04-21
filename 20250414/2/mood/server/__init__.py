@@ -1,16 +1,35 @@
 """Initial file for server."""
 
 import cowsay
-# import cmd
-# import re
 import asyncio
 import shlex
 import random
 
+import gettext
+import locale
+
 from ..common import jgsbat, weapons
-# pattern = re.compile(r'\w+')
+
+
+LOCALES = {
+    ("ru_RU", "UTF-8"): gettext.translation("init", "po1", ["ru_RU.UTF-8"], fallback=True),
+    ("en_US", "UTF-8"): gettext.NullTranslations(),
+    ("en_GB", "UTF-8"): gettext.NullTranslations(),
+}
 
 SIZE = 10
+
+clients_loc = dict()
+
+
+def ngettext(client, *text):
+    """Get translation function by chosen locale."""
+    return LOCALES[clients_loc[client]].ngettext(*text)
+
+
+def _(client, text):
+    """Get translation function by chosen locale."""
+    return LOCALES[clients_loc[client]].gettext(text)
 
 
 class Mood():
@@ -55,19 +74,19 @@ class Mood():
 
         :param args: string with args
         """
+        print(args)
         args = shlex.split(args)
 
         name, hello, hp, m_x, m_y = self.invalid_mon
         if len(args) == 0:
             args += ['default']
 
-        if len(args) != 8:
-            if "coords" not in args:
-                args += ['coords', 0, 0]
-            if "hp" not in args:
-                args += ["hp", 100]
-            if "hello" not in args:
-                args += ["hello", "Hello"]
+        if "coords" not in args:
+            args += ['coords', 0, 0]
+        if "hp" not in args:
+            args += ["hp", 100]
+        if "hello" not in args:
+            args += ["hello", "Hello"]
 
         name = args[0]
 
@@ -75,9 +94,18 @@ class Mood():
             return self.invalid_mon
 
         i = 1
-        while i < 8:
+        print(args)
+        while i < len(args):
+            print(args[i])
             if args[i] == 'hello':
-                hello = args[i+1]
+                hello = args[i + 1] if i + 1 < len(args) and args[i + 1] not in ['hp', 'coords'] else ""
+                i += 1
+
+                while i + 1 < len(args) and args[i + 1] not in ['hp', 'coords']:
+                    hello += " " + args[i+1]
+                    i += 1
+
+                i -= 1
             elif args[i] == 'hp':
                 try:
                     hp = int(args[i+1])
@@ -103,7 +131,7 @@ class Mood():
 
         if i < 8:
             return self.invalid_mon
-
+        print(m_x, m_y)
         return (name, hello, hp, m_x, m_y)
 
     def move(self, client, args):
@@ -120,7 +148,7 @@ class Mood():
         self.y[client] = (self.y[client] + dy) % SIZE
         x, y = self.x[client], self.y[client]
 
-        ans = f"Moved to ({x}, {y})\n"
+        ans = _(client, "Moved to ({}, {})\n").format(x, y)
 
         if self.field[y][x] == 0:
             return ans
@@ -146,19 +174,27 @@ class Mood():
         (name, hello, hp, m_x, m_y) = self.get_mon_args(args)
 
         if (name, hello, hp, m_x, m_y) == self.invalid_mon:
-            return (len(self.taken_cows), "Invalid arguments\n")
+            return (len(self.taken_cows), _(client, "Invalid arguments\n"))
 
-        if self.field[m_y][m_x] == 0:
-            ans = '"' + client + '"' + f' added {name} to ({m_x}, {m_y}) saying {hello} '
-            ans += f"with hp = {hp}"
-        else:
-            ans = '"' + client + '"' + ' replaced the old monster in '
-            ans += f"({m_x}, {m_y}) with a {name} saying {hello} with hp = {hp}"
+        msg_all = dict()
+        for i in self.clients:
+            if self.field[m_y][m_x] == 0:
+                ans = '"' + client + '"' + _(i, " added {} to ({}, {}) saying {} ").format(name, \
+                                                                                           m_x, m_y, \
+                                                                                           hello)
+                ans += ngettext(i, "with hp = {}", "with hp = {}", hp).format(hp)
+            else:
+                ans = '"' + client + '"' + _(i, ' replaced the old monster in ')
+                ans += ngettext(i, "({}, {}) with a {} saying {} with hp = {}", \
+                                "({}, {}) with a {} saying {} with hp = {}", \
+                                hp).format(m_x, m_y, name, hello, hp)
+
+            msg_all[i] = ans
 
         self.field[m_y][m_x] = {'hello': hello, 'hp': hp, 'name': name}
         self.taken_cows.add((m_y, m_x))
 
-        return (len(self.taken_cows), ans)
+        return (len(self.taken_cows), msg_all)
 
     def attack(self, client, args):
         """
@@ -170,26 +206,26 @@ class Mood():
         args = shlex.split(args)
 
         if len(args) < 1:
-            return "Type args"
+            return _(client, "Type args")
 
         x, y = self.x[client], self.y[client]
 
         if self.field[y][x] == 0:
-            return "No monster here"
+            return _(client, "No monster here")
 
         if args[0] != self.field[y][x]['name']:
-            return f"No {args[0]} here"
+            return _(client, "No {} here").format(args[0])
 
         weapon = 'sword'
 
         if len(args) >= 2 and args[1] != 'with':
-            return "Invalid arguments"
+            return _(client, "Invalid arguments")
 
         if len(args) >= 3:
             weapon = args[2]
 
         if weapon != 'sword' and weapon != 'spear' and weapon != 'axe':
-            return "Unknown weapon"
+            return _(client, "Unknown weapon")
 
         hp = int(self.field[y][x]['hp'])
         name = self.field[y][x]['name']
@@ -200,17 +236,27 @@ class Mood():
             damage = hp
         hp -= damage
 
-        ans = '"' + client + '"' + f" attacked {name},  damage {damage} hp\n"
+        msg_all = dict()
+        fl = True
+        for i in self.clients:
+            ans = '"' + client + '"' + ngettext(i, " attacked {},  damage {} hp\n", \
+                                                " attacked {},  damage {} hp\n", hp).format(name, \
+                                                                                            damage)
 
-        if hp <= 0:
-            ans += f"{name} died"
-            self.field[y][x] = 0
-            self.taken_cows.remove((y, x))
-        else:
-            ans += f"{name} now has {hp}"
-            self.field[y][x]['hp'] = hp
+            if hp <= 0:
+                ans += _(i, "{} died").format(name)
+                if fl:
+                    self.field[y][x] = 0
+                    self.taken_cows.remove((y, x))
+            else:
+                ans += ngettext(i, "{} now has {} hp.", "{} now has {} hp.", hp).format(name, hp)
+                if fl:
+                    self.field[y][x]['hp'] = hp
 
-        return (len(self.taken_cows), ans)
+            fl = False
+            msg_all[i] = ans
+
+        return (len(self.taken_cows), msg_all)
 
     async def move_random_mon(self):
         """Move random monster to the next cell by timer."""
@@ -218,7 +264,7 @@ class Mood():
 
         while True:
             if len(self.taken_cows) == 0 or len(self.taken_cows) == SIZE ** 2:
-                return ("", "", [])
+                return ([], "", [])
 
             cell = random.choice(list(self.taken_cows))
             move = random.choice(['up', 'down', 'right', 'left'])
@@ -235,18 +281,16 @@ class Mood():
             if self.field[new_cell[0]][new_cell[1]] != 0:
                 continue
 
+            if self.not_move_rand_mon:
+                return ([], "", [])
+
             mon_name = self.field[cell[0]][cell[1]]['name']
             hello = self.field[cell[0]][cell[1]]['hello']
-
-            msg_all = f"{mon_name} moved one cell {move}"
 
             if mon_name in self.allowed_list:
                 msg = cowsay.cowsay(hello, cow=mon_name)
             else:
                 msg = cowsay.cowsay(hello, cowfile=self.user_list[mon_name])
-
-            if self.not_move_rand_mon:
-                return ("", "", [])
 
             self.field[new_cell[0]][new_cell[1]] = self.field[cell[0]][cell[1]]
             self.field[cell[0]][cell[1]] = 0
@@ -255,9 +299,12 @@ class Mood():
             self.taken_cows.add(new_cell)
 
             names_list = []
+            msg_all = []
             for name in self.clients:
                 if self.x[name] == new_cell[1] and self.y[name] == new_cell[0]:
                     names_list.append(name)
+
+                msg_all.append(_(name, "{} moved one cell {}").format(mon_name, move))
 
             return (msg_all, msg, names_list)
 
@@ -282,10 +329,9 @@ async def chat(reader, writer):
     :param reader: read data from IO stream
     :param writer: write data to IO stream
     """
-    global mood, cow_num, clients, clients_names, clients_conns, mon_task, fl, moving
+    global mood, cow_num, clients, clients_names, clients_conns, clients_loc, mon_task, fl, moving
 
     me = "{}:{}".format(*writer.get_extra_info('peername'))
-
     name = await reader.readline()
     name = name.decode()[:-1]
 
@@ -299,9 +345,11 @@ async def chat(reader, writer):
 
         writer.write("in\n".encode())
 
+    clients_loc[name] = ("ru_RU", "UTF-8")
+
     for i in clients_names:
         if i != name:
-            await clients_conns[i].put(f"{name} joined the game.")
+            await clients_conns[i].put(_(name, "{} joined the game.").format(name))
 
     clients_conns[name] = asyncio.Queue()
 
@@ -318,27 +366,35 @@ async def chat(reader, writer):
             if q is mon_task:
                 msg_all, msg, cl = q.result()
 
-                if msg_all != "":
-                    for i in clients_names:
+                if len(msg_all) != 0:
+                    for i, ms in zip(clients_names, msg_all):
                         if i in cl:
-                            await clients_conns[i].put(msg_all + "\n" + msg)
+                            await clients_conns[i].put(ms + "\n" + msg)
                         else:
-                            await clients_conns[i].put(msg_all)
-
+                            await clients_conns[i].put(ms)
                 mon_task = asyncio.create_task(mood.move_random_mon())
             elif q is send:
                 query = q.result().decode().strip().split()
                 print(query)
 
                 if len(query) == 0:
-                    writer.write("Command is incorrect.\n".encode())
+                    writer.write(_(name, "Command is incorrect.\n").encode())
                     continue
-                if query[0] == 'move':
+                if query[0] == 'locale':
+                    try:
+                        cur = locale.getlocale()
+                        locale.setlocale(locale.LC_ALL, (query[1], query[2]))
+                        clients_loc[name] = (query[1], query[2])
+                        writer.write(_(name, "Set up locale: {} {}\n").format(query[1], query[2]).encode())
+                    except Exception:
+                        locale.setlocale(locale.LC_ALL, cur)
+                        writer.write(_(name, "Invalid locale: {} {}\n").format(query[1], query[2]).encode())
+                elif query[0] == 'move':
                     writer.write(mood.move(clients[me], " ".join(query[1:])).encode())
                 elif query[0] == 'addmon':
                     cur_cow_num, ans = mood.addmon(clients[me], " ".join(query[1:]))
 
-                    if ans == "Invalid arguments":
+                    if type(ans) is str:
                         writer.write(ans.encode())
                     else:
                         if cur_cow_num > 0 and moving is True:
@@ -348,11 +404,13 @@ async def chat(reader, writer):
                         cow_num = cur_cow_num
 
                         for i in clients_names:
-                            await clients_conns[i].put(ans)
+                            await clients_conns[i].put(ans[i])
                 elif query[0] == 'attack':
                     ans = mood.attack(clients[me], " ".join(query[1:]))
 
-                    if type(ans) is tuple:
+                    if type(ans) is str:
+                        writer.write(ans.encode())
+                    else:
                         cow_num, ans = ans
 
                         if cow_num == 0:
@@ -360,9 +418,7 @@ async def chat(reader, writer):
                             mood.not_move_rand_mon = True
 
                         for i in clients_names:
-                            await clients_conns[i].put(ans)
-                    else:
-                        writer.write(ans.encode())
+                            await clients_conns[i].put(ans[i])
                 elif query[0] == 'sayall':
                     for i in clients_names:
                         await clients_conns[i].put(name + ": " + " ".join(query[1:]))
@@ -375,13 +431,13 @@ async def chat(reader, writer):
                             mon_task = asyncio.create_task(mood.move_random_mon())
 
                         for i in clients_names:
-                            await clients_conns[i].put("Moving monsters: on")
+                            await clients_conns[i].put(_(i, "Moving monsters: on"))
                     elif query[1] == "off" and moving is True:
                         moving = False
                         mood.not_move_rand_mon = True
 
                         for i in clients_names:
-                            await clients_conns[i].put("Moving monsters: off")
+                            await clients_conns[i].put(_(i, "Moving monsters: off"))
                 elif query[0] == 'quit':
                     send.cancel()
                     receive.cancel()
@@ -391,12 +447,12 @@ async def chat(reader, writer):
                 send = asyncio.create_task(reader.readline())
             elif q is receive:
                 receive = asyncio.create_task(clients_conns[name].get())
-                writer.write(f"{q.result()}\n".encode())
+                writer.write("{}\n".format(q.result()).encode())
                 await writer.drain()
 
     print(f'{me} Done')
     for i in clients_names:
-        await clients_conns[i].put(f"{name} left the game.")
+        await clients_conns[i].put(_(i, "{} left the game.").format(name))
 
     send.cancel()
     receive.cancel()

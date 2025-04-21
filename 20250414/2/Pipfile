@@ -4,12 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+python-cowsay = "*"
 
 [dev-packages]
-python-cowsay = "*"
+flake8 = "*"
 pydocstyle = "*"
 sphinx = "*"
-flake8 = "*"
 babel = "*"
 
 [requires]
