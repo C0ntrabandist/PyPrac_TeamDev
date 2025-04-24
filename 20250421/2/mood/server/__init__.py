@@ -1,4 +1,5 @@
 """Initial file for server."""
+
 import cowsay
 import asyncio
 import shlex
@@ -73,7 +74,7 @@ class Mood():
 
         :param args: string with args
         """
-        # print(args)
+        print(args)
         args = shlex.split(args)
 
         name, hello, hp, m_x, m_y = self.invalid_mon
@@ -93,9 +94,9 @@ class Mood():
             return self.invalid_mon
 
         i = 1
-        # print(args)
+        print(args)
         while i < len(args):
-            # print(args[i])
+            print(args[i])
             if args[i] == 'hello':
                 hello = args[i + 1] if i + 1 < len(args) and args[i + 1] not in ['hp', 'coords'] else ""
                 i += 1
@@ -130,7 +131,7 @@ class Mood():
 
         if i < 8:
             return self.invalid_mon
-        # print(m_x, m_y)
+        print(m_x, m_y)
         return (name, hello, hp, m_x, m_y)
 
     def move(self, client, args):
@@ -374,7 +375,7 @@ async def chat(reader, writer):
                 mon_task = asyncio.create_task(mood.move_random_mon())
             elif q is send:
                 query = q.result().decode().strip().split()
-                # print(query)
+                print(query)
 
                 if len(query) == 0:
                     writer.write(_(name, "Command is incorrect.\n").encode())
@@ -449,7 +450,7 @@ async def chat(reader, writer):
                 writer.write("{}\n".format(q.result()).encode())
                 await writer.drain()
 
-    # print(f'{me} Done')
+    print(f'{me} Done')
     for i in clients_names:
         await clients_conns[i].put(_(i, "{} left the game.").format(name))
 
@@ -460,13 +461,8 @@ async def chat(reader, writer):
     writer.close()
 
 
-async def run_server():
+async def main():
     """Run async server."""
     server = await asyncio.start_server(chat, '0.0.0.0', 1337)
     async with server:
         await server.serve_forever()
-
-
-def main():
-    """Start server."""
-    asyncio.run(run_server())
