@@ -6,6 +6,8 @@ import readline
 import shlex
 import time
 import sys
+import socket
+import threading
 
 from ..common import jgsbat, prompt, weapons
 
@@ -102,3 +104,44 @@ def recieve(cmd):
         data += new.decode()
 
         print(f"\n{data.strip()}\n{cmd.prompt}{readline.get_line_buffer()}", end='', flush=True)
+
+
+def main():
+    """Start client."""
+    host = "localhost"
+    port = 1337
+    name = "My name\n"
+    file = ""
+
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == '--file':
+            file = "" if len(sys.argv) < i + 2 else sys.argv[i + 1]
+        elif sys.argv[i] == '--name':
+            name = "my name\n" if len(sys.argv) < i + 2 else sys.argv[i + 1] + "\n"
+        elif sys.argv[i] == '--host':
+            host = 'localhost' if len(sys.argv) < i + 2 else sys.argv[i + 1]
+        elif sys.argv[i] == '--port':
+            port = 1337 if len(sys.argv) < i + 2 else int(sys.argv[i + 1])
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((host, port))
+        s.sendall(name.encode())
+        is_name = s.recv(1024).decode()
+        if (is_name[:-1] == "off"):
+            print("The name is busy")
+            sys.exit(0)
+
+        print(f"{name[:-1]}, Welcome to Python-mood 0.1 !!!")
+        if file != "":
+            fd = open(file, 'r')
+            mood = Mood(s, fd)
+            mood.prompt = ""
+            mood.use_rawinput = False
+        else:
+            mood = Mood(s)
+
+        rec = threading.Thread(target=recieve, args=(mood,))
+        rec.daemon = True
+        rec.start()
+
+        mood.cmdloop()

@@ -11,7 +11,7 @@ from ..common import jgsbat, weapons
 
 
 LOCALES = {
-    ("ru_RU", "UTF-8"): gettext.translation("init", "po1", ["ru_RU.UTF-8"], fallback=True),
+    ("ru_RU", "UTF-8"): gettext.translation("mood", "po1", ["ru_RU.UTF-8"], fallback=True),
     ("en_US", "UTF-8"): gettext.NullTranslations(),
     ("en_GB", "UTF-8"): gettext.NullTranslations(),
 }
@@ -303,7 +303,14 @@ class Mood():
                 if self.x[name] == new_cell[1] and self.y[name] == new_cell[0]:
                     names_list.append(name)
 
-                msg_all.append(_(name, "{} moved one cell {}").format(mon_name, move))
+                if move == 'up':
+                    msg_all.append(_(name, "{} moved one cell up").format(mon_name, move))
+                elif move == 'down':
+                    msg_all.append(_(name, "{} moved one cell down").format(mon_name, move))
+                elif move == 'right':
+                    msg_all.append(_(name, "{} moved one cell right").format(mon_name, move))
+                else:
+                    msg_all.append(_(name, "{} moved one cell left").format(mon_name, move))
 
             return (msg_all, msg, names_list)
 

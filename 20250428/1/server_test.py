@@ -12,10 +12,7 @@ import start_server
 def send_cmd(cmd, sock):
     """Send command to server."""
     sock.sendall((cmd + "\n").encode())
-    # print(cmd)
     ans = sock.recv(1024).decode()
-    # print(ans)
-    # print("Moved to (1, 0)\n" + cowsay.cowsay("it is me, hi", cow='tux'))
     return ans
 
 
