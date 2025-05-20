@@ -260,7 +260,7 @@ class Mood():
 
     async def move_random_mon(self):
         """Move random monster to the next cell by timer."""
-        await asyncio.sleep(30)
+        await asyncio.sleep(10)
 
         while True:
             if len(self.taken_cows) == 0 or len(self.taken_cows) == SIZE ** 2:
