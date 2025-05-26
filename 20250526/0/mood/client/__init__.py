@@ -114,7 +114,7 @@ def recieve(cmd):
 def main():
     """Start client."""
     host = "localhost"
-    port = 2222
+    port = 1337
     name = "My name\n"
     file = ""
 
@@ -126,7 +126,7 @@ def main():
         elif sys.argv[i] == '--host':
             host = 'localhost' if len(sys.argv) < i + 2 else sys.argv[i + 1]
         elif sys.argv[i] == '--port':
-            port = 2222 if len(sys.argv) < i + 2 else int(sys.argv[i + 1])
+            port = 1337 if len(sys.argv) < i + 2 else int(sys.argv[i + 1])
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))

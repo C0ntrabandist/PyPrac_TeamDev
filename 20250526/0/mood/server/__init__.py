@@ -470,7 +470,7 @@ async def chat(reader, writer):
 
 async def run_server():
     """Run async server."""
-    server = await asyncio.start_server(chat, '0.0.0.0', 2222)
+    server = await asyncio.start_server(chat, '0.0.0.0', 1337)
     async with server:
         await server.serve_forever()
 
