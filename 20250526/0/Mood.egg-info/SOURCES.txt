@@ -1,4 +1,3 @@
-.flake8
 MANIFEST.in
 Pipfile
 client_test.py
@@ -24,7 +23,6 @@ i18n/po/ru_RU.UTF-8/LC_MESSAGES/init.po
 i18n/po/ru_RU.UTF-8/LC_MESSAGES/mood.po
 mood/client/__init__.py
 mood/client/__main__.py
-mood/client/__main__.py~
 mood/common/__init__.py
 mood/docs/build/doctrees/client.doctree
 mood/docs/build/doctrees/common.doctree
@@ -60,4 +58,3 @@ mood/docs/build/html/_static/sphinx_highlight.js
 mood/po/ru_RU.UTF-8/LC_MESSAGES/mood.mo
 mood/server/__init__.py
 mood/server/__main__.py
-mood/server/__main__.py~
